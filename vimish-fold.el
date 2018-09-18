@@ -148,7 +148,7 @@ If ON is NIL, make the text editable again."
        (if on #'set-text-properties #'remove-text-properties)
        beg end (list 'read-only on)))))
 
-(defun vimish-fold--get-header (beg end)
+(defun vimish-fold--get-header (beg end &optional fold-string)
   "Extract folding header from region between BEG and END in BUFFER.
 
 If BUFFER is NIL, current buffer is used."
@@ -157,12 +157,16 @@ If BUFFER is NIL, current buffer is used."
     (save-excursion
       (goto-char beg)
       (re-search-forward "^\\([[:blank:]]*.+\\)$")
+      (or fold-string
+          (setq fold-string
+            (if (and (>= (match-beginning 1) beg)
+                     (<= (match-end 1)       end))
+              (match-string-no-properties 1)
+              vimish-fold-blank-fold-header)))
+      (message "str: %s" fold-string)
       (concat
        (truncate-string-to-width
-        (if (and (>= (match-beginning 1) beg)
-                 (<= (match-end 1)       end))
-            (match-string-no-properties 1)
-          vimish-fold-blank-fold-header)
+        fold-string
         (- (or vimish-fold-header-width
                (window-width))
            (length info))
@@ -204,7 +208,7 @@ This includes fringe bitmaps and faces."
           vimish-fold--unfolded)))
 
 ;;;###autoload
-(defun vimish-fold (beg end)
+(defun vimish-fold (beg end &optional fold-string)
   "Fold active region staring at BEG, ending at END."
   (interactive "r")
   (deactivate-mark)
@@ -220,7 +224,7 @@ This includes fringe bitmaps and faces."
       (overlay-put overlay 'type 'vimish-fold--folded)
       (overlay-put overlay 'evaporate t)
       (overlay-put overlay 'keymap vimish-fold-folded-keymap)
-      (vimish-fold--apply-cosmetic overlay (vimish-fold--get-header beg end)))
+      (vimish-fold--apply-cosmetic overlay (vimish-fold--get-header beg end fold-string)))
     (goto-char beg)))
 
 (defun vimish-fold--unfold (overlay)
